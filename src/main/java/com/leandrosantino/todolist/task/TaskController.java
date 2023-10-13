@@ -63,14 +63,28 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public TaskModel update(
+    public ResponseEntity update(
         @RequestBody TaskModel taskModel,
         @PathVariable UUID id,
         HttpServletRequest request
     ){
         var task = this.taskRepository.findById(id).orElse(null);
+
+        if(task == null){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("task not found");
+        }
+
+        var idUser = (UUID) request.getAttribute("idUser");
+
+        if(!task.getIdUser().equals(idUser)){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("this user not is the owner of task");
+        }
+
         Utils.copyNonNullProperties(taskModel, task);
-        return this.taskRepository.save(task);
+        var taskUpdated = this.taskRepository.save(task);
+        return ResponseEntity.ok().body(taskUpdated);
     }
 
 }
