@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.leandrosantino.todolist.Responses.HttpResponse;
+
 import at.favre.lib.crypto.bcrypt.BCrypt;
 
 @RestController
@@ -18,11 +20,13 @@ public class UserController {
     private IUserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity create(@RequestBody UserModel userModel) {
+    public ResponseEntity<HttpResponse<UserModel>> create(@RequestBody UserModel userModel) {
+        var response = new HttpResponse<UserModel>();
         var user = this.userRepository.findByUsername(userModel.getUsername());
 
         if (user != null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("user already exists");
+            response.setMessage("user already exists");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         var passwordHashered = BCrypt.withDefaults()
@@ -32,7 +36,8 @@ public class UserController {
         userModel.setPassword(passwordHashered);
 
         var userCreated = this.userRepository.save(userModel);
-        return ResponseEntity.status(HttpStatus.CREATED).body(userCreated);
+        response.setData(userCreated);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
 }

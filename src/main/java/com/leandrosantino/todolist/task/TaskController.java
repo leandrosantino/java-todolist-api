@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.leandrosantino.todolist.Responses.HttpResponse;
 import com.leandrosantino.todolist.utils.Utils;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,31 +28,36 @@ public class TaskController {
     private ITaskRepository taskRepository;
 
     @PostMapping
-    public ResponseEntity create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
+    public ResponseEntity<HttpResponse<TaskModel>> create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
+        var response = new HttpResponse<TaskModel>();
         UUID idUser = (UUID) request.getAttribute("idUser");
         taskModel.setIdUser(idUser);
 
         var currentDate = LocalDateTime.now();
 
         if(currentDate.isAfter(taskModel.getStarAt())){
+            response.setMessage("curent date is after of start date");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("curent date is after of start date ");
+                .body(response);
         }
 
         if(currentDate.isAfter(taskModel.getEndAt())){
+            response.setMessage("curent date is after of end date");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("curent date is after of end date ");
+                .body(response);
         }
 
         if(taskModel.getStarAt().isAfter(taskModel.getEndAt())){
+            response.setMessage("start date is after of end date ");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("start date is after of end date ");
+                .body(response);
         }
 
 
 
         var task = this.taskRepository.save(taskModel);
-        return ResponseEntity.status(HttpStatus.OK).body(task);
+        response.setData(task);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping
@@ -63,28 +69,30 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity update(
+    public ResponseEntity<HttpResponse<TaskModel>> update(
         @RequestBody TaskModel taskModel,
         @PathVariable UUID id,
         HttpServletRequest request
     ){
         var task = this.taskRepository.findById(id).orElse(null);
+        var response = new HttpResponse<TaskModel>();
 
         if(task == null){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("task not found");
+            response.setMessage("task not found");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         var idUser = (UUID) request.getAttribute("idUser");
 
         if(!task.getIdUser().equals(idUser)){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("this user not is the owner of task");
+            response.setMessage("this user not is the owner of task");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         Utils.copyNonNullProperties(taskModel, task);
         var taskUpdated = this.taskRepository.save(task);
-        return ResponseEntity.ok().body(taskUpdated);
+        response.setData(taskUpdated);
+        return ResponseEntity.ok().body(response);
     }
 
 }
